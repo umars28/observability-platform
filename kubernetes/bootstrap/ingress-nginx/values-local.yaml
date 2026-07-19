@@ -1,0 +1,30 @@
+# ingress-nginx — kind cluster
+# Uses NodePort-style host ports via kind config (8080/8443 → 80/443)
+controller:
+  replicaCount: 1
+  service:
+    type: NodePort
+    nodePorts:
+      http: 30080
+      https: 30443
+  hostPort:
+    enabled: true
+    ports:
+      http: 80
+      https: 443
+  nodeSelector:
+    ingress-ready: "true"
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Equal
+      effect: NoSchedule
+    - key: node-role.kubernetes.io/master
+      operator: Equal
+      effect: NoSchedule
+  admissionWebhooks:
+    enabled: false
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits:   { cpu: 500m, memory: 512Mi }
+  metrics:
+    enabled: true

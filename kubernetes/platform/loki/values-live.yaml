@@ -1,0 +1,22 @@
+loki:
+  storage:
+    type: s3
+    bucketNames:
+      chunks: __OBJECT_STORE_BUCKET_LOKI__
+      ruler:  __OBJECT_STORE_BUCKET_LOKI__
+      admin:  __OBJECT_STORE_BUCKET_LOKI__
+    s3:
+      endpoint: __OBJECT_STORE_ENDPOINT__
+      region: __OBJECT_STORE_REGION__
+      s3ForcePathStyle: true
+      # accessKeyId & secretAccessKey come from Secret via extraEnvFrom below
+
+singleBinary:
+  replicas: 2
+  resources:
+    requests: { cpu: 500m, memory: 1Gi }
+    limits:   { cpu: 2000m, memory: 4Gi }
+  persistence:
+    size: 50Gi
+  extraEnvFrom:
+    - secretRef: { name: loki-object-storage }

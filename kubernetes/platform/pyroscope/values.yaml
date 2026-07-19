@@ -1,0 +1,31 @@
+# Pyroscope — base values
+fullnameOverride: pyroscope
+
+pyroscope:
+  config: |
+    multitenancy_enabled: true
+    limits:
+      max_query_length: 720h
+      max_query_lookback: 720h
+      ingestion_rate_mb: 4
+      ingestion_burst_size_mb: 8
+      max_profile_size_bytes: 4194304
+    storage:
+      backend: s3
+      # s3 params filled in by overlay via env
+
+# Single-target install (monolithic).
+services:
+  - target: all
+    replicas: 1
+    resources:
+      requests: { cpu: 200m, memory: 512Mi }
+    persistence:
+      enabled: true
+      size: 10Gi
+
+minio:
+  enabled: false
+
+serviceMonitor:
+  enabled: false

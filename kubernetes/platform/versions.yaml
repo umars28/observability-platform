@@ -1,0 +1,20 @@
+# Pinned chart versions for the LGTMP platform.
+# Bump one line at a time; each change is a PR.
+mimir:
+  chart: grafana/mimir-distributed
+  version: "5.5.1"
+loki:
+  chart: grafana/loki
+  version: "6.16.0"
+tempo:
+  chart: grafana/tempo
+  version: "1.10.1"
+pyroscope:
+  chart: grafana/pyroscope
+  version: "1.7.1"
+grafana:
+  chart: grafana/grafana
+  version: "8.5.1"
+alloy:
+  chart: grafana/alloy
+  version: "0.9.0"

@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alerts-platform-storage
+  namespace: observability
+  labels:
+    tenant: _meta
+    component: platform
+data:
+  storage.yaml: |
+    groups:
+      - name: _meta.object_storage
+        interval: 30s
+        rules:
+          - alert: ObjectStorageWriteFailures
+            expr: |
+              sum by (job) (rate(thanos_objstore_bucket_operation_failures_total{operation="upload"}[5m])) > 0.05
+            for: 10m
+            labels:
+              severity: critical
+              runbook: object-storage-writes
+            annotations:
+              summary: "Object storage upload failures on {{ $labels.job }}"
+              description: "Data cannot be persisted; recent writes are at risk. Check credentials and endpoint."
+
+          - alert: CompactorLagging
+            expr: |
+              time() - cortex_compactor_last_successful_run_timestamp_seconds > 3600
+            for: 15m
+            labels:
+              severity: warning
+              runbook: mimir-compactor-lag
+            annotations:
+              summary: "Mimir compactor has not run for > 1h"
+
+          - alert: LokiCompactorStalled
+            expr: |
+              time() - loki_compactor_apply_retention_last_successful_run_timestamp_seconds > 7200
+            for: 15m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Loki retention compaction stalled for > 2h"

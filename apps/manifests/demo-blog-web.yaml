@@ -1,0 +1,47 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-blog-web
+  namespace: demo
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: demo-blog-web }
+  template:
+    metadata:
+      labels:
+        app: demo-blog-web
+        tenant: _default
+    spec:
+      containers:
+        - name: app
+          image: demo-blog-web:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - { name: http, containerPort: 3000 }
+          env:
+            - { name: OTEL_SERVICE_NAME, value: demo-blog-web }
+            - { name: OTEL_EXPORTER_OTLP_ENDPOINT, value: http://alloy.observability.svc:4317 }
+            - { name: PYROSCOPE_ENDPOINT, value: http://pyroscope.observability.svc:4040 }
+            - { name: TENANT, value: _default }
+            - { name: APP_ENV, value: local }
+          resources:
+            requests: { cpu: 50m, memory: 96Mi }
+            limits:   { cpu: 500m, memory: 384Mi }
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-blog-web
+  namespace: demo
+spec:
+  selector: { app: demo-blog-web }
+  ports:
+    - { name: http, port: 3000, targetPort: http }

@@ -1,0 +1,32 @@
+version: 2
+updates:
+  # Terraform providers
+  - package-ecosystem: terraform
+    directory: /terraform/environments/live
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+
+  # Go dependencies
+  - package-ecosystem: gomod
+    directory: /apps/demo-shop-api
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+
+  # Node dependencies
+  - package-ecosystem: npm
+    directory: /apps/demo-blog-web
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+
+  # GitHub Actions
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+
+  # Dockerfiles
+  - package-ecosystem: docker
+    directory: /apps/demo-shop-api
+    schedule: { interval: weekly }
+  - package-ecosystem: docker
+    directory: /apps/demo-blog-web
+    schedule: { interval: weekly }

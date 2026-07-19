@@ -1,0 +1,125 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ─── Linting ────────────────────────────────────────────────────────────
+  lint-yaml:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ibiqlik/action-yamllint@v3
+        with:
+          config_file: .yamllint.yaml
+          strict: false
+
+  lint-helm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with: { version: v3.15.0 }
+      - name: Add Helm repos
+        run: |
+          helm repo add grafana https://grafana.github.io/helm-charts
+          helm repo add argo https://argoproj.github.io/argo-helm
+          helm repo add jetstack https://charts.jetstack.io
+          helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+          helm repo add external-secrets https://charts.external-secrets.io
+          helm repo add minio https://charts.min.io
+          helm repo update
+      - name: Lint platform values
+        run: |
+          for dir in kubernetes/platform/*/; do
+            name=$(basename "$dir")
+            [ -f "$dir/values.yaml" ] || continue
+            echo "▶ Linting $name"
+            case "$name" in
+              mimir)     chart="grafana/mimir-distributed" ;;
+              loki)      chart="grafana/loki" ;;
+              tempo)     chart="grafana/tempo" ;;
+              pyroscope) chart="grafana/pyroscope" ;;
+              grafana)   chart="grafana/grafana" ;;
+              alloy)     chart="grafana/alloy" ;;
+              *) continue ;;
+            esac
+            helm template test "$chart" -f "$dir/values.yaml" >/dev/null
+          done
+
+  lint-terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: 1.9.0 }
+      - name: terraform fmt
+        run: terraform -chdir=terraform fmt -recursive -check
+      - name: terraform validate (module)
+        run: |
+          cd terraform/modules/hetzner-k3s
+          terraform init -backend=false
+          terraform validate
+
+  # ─── Kustomize builds ──────────────────────────────────────────────────
+  kustomize-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install kustomize
+        run: |
+          curl -sfL "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+      - name: Build tenant template (substituted)
+        run: |
+          cp -r kubernetes/tenants/_template kubernetes/tenants/ci-check
+          find kubernetes/tenants/ci-check -type f -exec sed -i "s/__TENANT__/ci-check/g" {} +
+          kustomize build kubernetes/tenants/ci-check >/dev/null
+      - name: Build apps
+        run: kustomize build apps/ >/dev/null
+
+  # ─── Go build & vet ────────────────────────────────────────────────────
+  go-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: "1.22" }
+      - name: Build demo-shop-api
+        working-directory: apps/demo-shop-api
+        run: |
+          go vet ./...
+          go build -o /tmp/demo-shop-api ./cmd
+
+  # ─── Node build ────────────────────────────────────────────────────────
+  node-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - name: Install demo-blog-web
+        working-directory: apps/demo-blog-web
+        run: npm install --no-audit --no-fund
+
+  # ─── Docker build (verify Dockerfiles parse and layers cache) ──────────
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build demo-shop-api image
+        run: docker build -t demo-shop-api:ci apps/demo-shop-api
+      - name: Build demo-blog-web image
+        run: docker build -t demo-blog-web:ci apps/demo-blog-web
+
+  # ─── Shell script lint ─────────────────────────────────────────────────
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ludeeus/action-shellcheck@2.0.0
+        with:
+          scandir: scripts

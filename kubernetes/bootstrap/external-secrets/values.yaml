@@ -1,0 +1,21 @@
+# External Secrets Operator — production only
+# Pulls object-storage credentials, ACME emails, etc. from an external store.
+# Configure the ClusterSecretStore separately per environment (see cluster-secret-store-*.yaml)
+installCRDs: true
+
+replicaCount: 1
+resources:
+  requests: { cpu: 10m, memory: 32Mi }
+  limits:   { cpu: 200m, memory: 256Mi }
+
+webhook:
+  replicaCount: 1
+  resources:
+    requests: { cpu: 10m, memory: 32Mi }
+    limits:   { cpu: 200m, memory: 128Mi }
+
+certController:
+  replicaCount: 1
+  resources:
+    requests: { cpu: 10m, memory: 32Mi }
+    limits:   { cpu: 200m, memory: 128Mi }

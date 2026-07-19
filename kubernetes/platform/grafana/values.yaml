@@ -1,0 +1,109 @@
+# Grafana — base values
+# Preconfigured with datasources pointing at the four LGTMP components.
+# Multi-tenancy via HTTP header injected per datasource.
+
+fullnameOverride: grafana
+
+replicas: 1
+
+persistence:
+  enabled: true
+  size: 5Gi
+
+# Admin credentials mounted from a Secret (created out-of-band or by external-secrets).
+admin:
+  existingSecret: grafana-admin
+
+# Datasources declared as code (provisioned at startup).
+# Note: `orgId: <tenant>` cannot pin an X-Scope-OrgID; we set the tenant header via
+# secureJsonData.httpHeaderValue1. See kubernetes/tenants/<tenant>/datasources.yaml
+# for per-tenant instances of these datasources (folder-scoped).
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      # Meta tenant — the platform's own metrics. Cannot be deleted.
+      - name: Mimir (_meta)
+        type: prometheus
+        uid: mimir-meta
+        url: http://mimir-nginx.observability.svc/prometheus
+        access: proxy
+        isDefault: false
+        jsonData:
+          httpHeaderName1: X-Scope-OrgID
+        secureJsonData:
+          httpHeaderValue1: _meta
+      - name: Loki (_meta)
+        type: loki
+        uid: loki-meta
+        url: http://loki-gateway.observability.svc
+        access: proxy
+        jsonData:
+          httpHeaderName1: X-Scope-OrgID
+        secureJsonData:
+          httpHeaderValue1: _meta
+      - name: Tempo (_meta)
+        type: tempo
+        uid: tempo-meta
+        url: http://tempo.observability.svc:3100
+        access: proxy
+        jsonData:
+          httpHeaderName1: X-Scope-OrgID
+        secureJsonData:
+          httpHeaderValue1: _meta
+      - name: Pyroscope (_meta)
+        type: grafana-pyroscope-datasource
+        uid: pyroscope-meta
+        url: http://pyroscope.observability.svc:4040
+        access: proxy
+        jsonData:
+          httpHeaderName1: X-Scope-OrgID
+        secureJsonData:
+          httpHeaderValue1: _meta
+
+# Dashboard provisioning — sources dashboards from ConfigMaps managed by ArgoCD.
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+      - name: default
+        orgId: 1
+        folder: ""
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/default
+      - name: meta
+        orgId: 1
+        folder: "_meta"
+        type: file
+        disableDeletion: false
+        editable: false
+        options:
+          path: /var/lib/grafana/dashboards/meta
+
+dashboardsConfigMaps:
+  default: grafana-dashboards-default
+  meta: grafana-dashboards-meta
+
+# Enable feature flags for correlations (traces↔logs↔profiles jumps).
+grafana.ini:
+  server:
+    root_url: "%(protocol)s://%(domain)s/"
+  feature_toggles:
+    enable: |
+      traceToProfiles
+      traceqlSearch
+      correlations
+      publicDashboards
+  analytics:
+    reporting_enabled: false
+    check_for_updates: false
+
+resources:
+  requests: { cpu: 100m, memory: 256Mi }
+  limits:   { cpu: 500m, memory: 1Gi }
+
+serviceMonitor:
+  enabled: false

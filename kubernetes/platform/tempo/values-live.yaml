@@ -1,0 +1,18 @@
+tempo:
+  storage:
+    trace:
+      backend: s3
+      s3:
+        endpoint: __OBJECT_STORE_ENDPOINT__
+        bucket: __OBJECT_STORE_BUCKET_TEMPO__
+        region: __OBJECT_STORE_REGION__
+        # access_key / secret_key sourced from env
+
+replicas: 2
+persistence:
+  size: 50Gi
+resources:
+  requests: { cpu: 500m, memory: 1Gi }
+  limits:   { cpu: 2000m, memory: 4Gi }
+extraEnvFrom:
+  - secretRef: { name: tempo-object-storage }

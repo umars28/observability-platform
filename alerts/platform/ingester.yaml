@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alerts-platform-ingester
+  namespace: observability
+  labels:
+    tenant: _meta
+    component: platform
+data:
+  ingester.yaml: |
+    groups:
+      - name: _meta.mimir_ingester
+        interval: 30s
+        rules:
+          - alert: MimirIngesterOOMKilled
+            expr: |
+              increase(kube_pod_container_status_last_terminated_reason{reason="OOMKilled",pod=~"mimir-ingester.*"}[10m]) > 0
+            for: 1m
+            labels:
+              severity: critical
+              runbook: mimir-ingester-oom
+            annotations:
+              summary: "Mimir ingester {{ $labels.pod }} was OOMKilled"
+              description: "Ingesters buffer recent samples; OOM causes data loss. Bump memory limits."
+
+          - alert: MimirIngesterHighMemoryUse
+            expr: |
+              container_memory_working_set_bytes{pod=~"mimir-ingester.*"}
+                / on(pod) container_spec_memory_limit_bytes{pod=~"mimir-ingester.*"} > 0.85
+            for: 15m
+            labels:
+              severity: warning
+              runbook: mimir-ingester-memory
+            annotations:
+              summary: "Mimir ingester {{ $labels.pod }} at >85% memory"
+              description: "Sustained high memory. If this stays >15min, scale ingesters or bump limits."
+
+          - alert: MimirIngesterRestarting
+            expr: |
+              rate(kube_pod_container_status_restarts_total{pod=~"mimir-ingester.*"}[15m]) > 0
+            for: 15m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Mimir ingester {{ $labels.pod }} is restarting"

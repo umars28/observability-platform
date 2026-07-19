@@ -1,0 +1,12 @@
+# Grafana — local overrides
+# Local dev uses a plaintext admin secret and no ingress (port-forward instead).
+service:
+  type: ClusterIP
+  port: 80
+ingress:
+  enabled: false
+# Convenience: allow anonymous access as Viewer locally so demos don't require login.
+grafana.ini:
+  auth.anonymous:
+    enabled: true
+    org_role: Viewer

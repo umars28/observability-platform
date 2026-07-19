@@ -1,0 +1,91 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1"  # weekly Monday 06:00 UTC — catches new CVEs against unchanged code
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  # ─── Config-level scanning ─────────────────────────────────────────────
+  trivy-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy config scan
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: config
+          scan-ref: .
+          format: sarif
+          output: trivy-config.sarif
+          exit-code: "0"           # report only, don't fail
+          severity: HIGH,CRITICAL
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with: { sarif_file: trivy-config.sarif }
+
+  # ─── Image scanning ─────────────────────────────────────────────────────
+  trivy-images:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image:
+          - path: apps/demo-shop-api
+            tag: demo-shop-api:scan
+          - path: apps/demo-blog-web
+            tag: demo-blog-web:scan
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t ${{ matrix.image.tag }} ${{ matrix.image.path }}
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: ${{ matrix.image.tag }}
+          format: sarif
+          output: trivy-${{ matrix.image.tag }}.sarif
+          severity: HIGH,CRITICAL
+          exit-code: "0"
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with: { sarif_file: trivy-${{ matrix.image.tag }}.sarif }
+
+  # ─── Terraform static analysis ─────────────────────────────────────────
+  checkov:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bridgecrewio/checkov-action@master
+        with:
+          directory: terraform/
+          quiet: true
+          soft_fail: true
+          framework: terraform
+          output_format: sarif
+          output_file_path: checkov.sarif
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with: { sarif_file: checkov.sarif }
+
+  # ─── Kubernetes manifests ──────────────────────────────────────────────
+  kubesec:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install kubesec
+        run: |
+          curl -sSL https://github.com/controlplaneio/kubesec/releases/download/v2.14.0/kubesec_linux_amd64.tar.gz | tar xz
+          sudo mv kubesec /usr/local/bin/
+      - name: Scan app manifests
+        run: |
+          for f in apps/manifests/*.yaml; do
+            echo "▶ $f"
+            kubesec scan "$f" || true
+          done

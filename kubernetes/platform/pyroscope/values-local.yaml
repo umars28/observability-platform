@@ -1,0 +1,12 @@
+pyroscope:
+  config: |
+    multitenancy_enabled: true
+    storage:
+      backend: s3
+      s3:
+        endpoint: minio.minio.svc:9000
+        bucket_name: pyroscope-profiles
+        region: us-east-1
+        access_key_id: minio
+        secret_access_key: minio-local-secret
+        insecure: true

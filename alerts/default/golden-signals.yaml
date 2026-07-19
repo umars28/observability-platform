@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alerts-default-golden-signals
+  namespace: observability
+  labels:
+    tenant: _default
+data:
+  golden.yaml: |
+    groups:
+      - name: default.golden_signals
+        interval: 30s
+        rules:
+          - alert: DefaultHighErrorRate
+            expr: |
+              sum by (service_name) (rate(http_requests_total{status=~"5.."}[5m]))
+                / on(service_name)
+              sum by (service_name) (rate(http_requests_total[5m]))
+              > 0.05
+            for: 5m
+            labels:
+              severity: warning
+              runbook: high-error-rate
+            annotations:
+              summary: "5xx rate > 5% on {{ $labels.service_name }}"
+
+          - alert: DefaultHighLatencyP99
+            expr: |
+              histogram_quantile(0.99,
+                sum by (le, service_name) (rate(http_request_duration_seconds_bucket[5m]))
+              ) > 1
+            for: 10m
+            labels:
+              severity: warning
+              runbook: high-latency
+            annotations:
+              summary: "P99 latency > 1s on {{ $labels.service_name }}"

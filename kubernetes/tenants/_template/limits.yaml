@@ -1,0 +1,28 @@
+# Per-tenant limits — merged into each component's `overrides` at runtime.
+# Keep these in sync with tenant.yaml quotas.
+mimir:
+  __TENANT__:
+    ingestion_rate: 50000
+    ingestion_burst_size: 100000
+    max_global_series_per_user: 500000
+    compactor_blocks_retention_period: 90d
+    max_query_length: 720h
+
+loki:
+  __TENANT__:
+    ingestion_rate_mb: 5
+    ingestion_burst_size_mb: 10
+    retention_period: 720h
+    max_query_length: 720h
+    max_streams_per_user: 50000
+
+tempo:
+  __TENANT__:
+    ingestion:
+      max_bytes_per_trace: 5000000
+    retention: 168h
+
+pyroscope:
+  __TENANT__:
+    ingestion_rate_mb: 2
+    max_query_length: 720h

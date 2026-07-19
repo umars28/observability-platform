@@ -1,0 +1,61 @@
+# Mimir — production overlay
+# Credentials mounted from a Secret sourced by external-secrets.
+mimir:
+  structuredConfig:
+    common:
+      storage:
+        backend: s3
+        s3:
+          endpoint: __OBJECT_STORE_ENDPOINT__
+          region: __OBJECT_STORE_REGION__
+          bucket_name: __OBJECT_STORE_BUCKET_MIMIR__
+          # Access key & secret loaded from env via extraEnvFrom below
+    blocks_storage:
+      backend: s3
+      s3:
+        bucket_name: __OBJECT_STORE_BUCKET_MIMIR__
+    alertmanager_storage:
+      backend: s3
+      s3:
+        bucket_name: __OBJECT_STORE_BUCKET_MIMIR__
+    ruler_storage:
+      backend: s3
+      s3:
+        bucket_name: __OBJECT_STORE_BUCKET_MIMIR__
+
+# Production ingester replicas — RF=3 is the durability floor.
+ingester:
+  replicas: 3
+  persistentVolume:
+    size: 50Gi
+  resources:
+    requests: { cpu: 500m, memory: 2Gi }
+    limits:   { cpu: 2000m, memory: 4Gi }
+
+store_gateway:
+  replicas: 2
+  persistentVolume:
+    size: 50Gi
+
+# Load credentials from external-secrets-managed Secret
+distributor:
+  extraEnvFrom:
+    - secretRef: { name: mimir-object-storage }
+ingester:
+  extraEnvFrom:
+    - secretRef: { name: mimir-object-storage }
+querier:
+  extraEnvFrom:
+    - secretRef: { name: mimir-object-storage }
+store_gateway:
+  extraEnvFrom:
+    - secretRef: { name: mimir-object-storage }
+compactor:
+  extraEnvFrom:
+    - secretRef: { name: mimir-object-storage }
+ruler:
+  extraEnvFrom:
+    - secretRef: { name: mimir-object-storage }
+alertmanager:
+  extraEnvFrom:
+    - secretRef: { name: mimir-object-storage }

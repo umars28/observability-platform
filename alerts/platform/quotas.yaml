@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alerts-platform-quotas
+  namespace: observability
+  labels:
+    tenant: _meta
+    component: platform
+data:
+  quotas.yaml: |
+    groups:
+      - name: _meta.tenant_quotas
+        interval: 60s
+        rules:
+          - alert: TenantMetricsIngestRateNearLimit
+            expr: |
+              sum by (user) (rate(cortex_distributor_received_samples_total[5m]))
+                /
+              on(user) group_left cortex_limits_defaults{limit_name="ingestion_rate"}
+                > 0.85
+            for: 30m
+            labels:
+              severity: warning
+              runbook: tenant-quota
+            annotations:
+              summary: "Tenant {{ $labels.user }} at >85% of metrics ingest rate limit"
+
+          - alert: TenantSeriesNearLimit
+            expr: |
+              cortex_ingester_memory_series
+                /
+              on(user) group_left cortex_limits_overrides{limit_name="max_global_series_per_user"}
+                > 0.85
+            for: 30m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Tenant {{ $labels.user }} at >85% of active series limit"

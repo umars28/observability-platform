@@ -1,0 +1,11 @@
+tempo:
+  storage:
+    trace:
+      backend: s3
+      s3:
+        endpoint: minio.minio.svc:9000
+        bucket: tempo-traces
+        region: us-east-1
+        access_key: minio
+        secret_key: minio-local-secret
+        insecure: true

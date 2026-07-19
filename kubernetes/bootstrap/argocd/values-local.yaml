@@ -1,0 +1,52 @@
+# ArgoCD — local kind cluster overrides
+# Slim install: no HA, no TLS, low resources
+global:
+  domain: argocd.localhost
+
+configs:
+  params:
+    server.insecure: true
+  cm:
+    resource.exclusions: |
+      - apiGroups:
+          - cilium.io
+        kinds:
+          - CiliumIdentity
+        clusters:
+          - "*"
+
+server:
+  replicas: 1
+  service:
+    type: ClusterIP
+  extraArgs:
+    - --insecure
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits:   { cpu: 500m, memory: 512Mi }
+
+controller:
+  replicas: 1
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits:   { cpu: 1000m, memory: 1Gi }
+
+repoServer:
+  replicas: 1
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits:   { cpu: 500m, memory: 512Mi }
+
+applicationSet:
+  replicas: 1
+
+notifications:
+  enabled: false
+
+dex:
+  enabled: false
+
+redis-ha:
+  enabled: false
+redis:
+  enabled: true

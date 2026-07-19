@@ -1,0 +1,90 @@
+# Grafana Alloy — base values
+# Central DaemonSet: receives OTLP from workloads and fans out to Mimir/Loki/Tempo/Pyroscope.
+#
+# TENANT ROUTING MODEL
+# --------------------
+# Each workload sends OTLP with an OTLP header `X-Scope-OrgID: <tenant>` OR sets the
+# resource attribute `deployment.environment` to the tenant name. Alloy propagates it.
+#
+# For workloads that cannot set the header, deploy a sidecar Alloy inside the tenant's
+# namespace with a hardcoded `X-Scope-OrgID`. See kubernetes/tenants/_template.
+
+fullnameOverride: alloy
+
+controller:
+  type: daemonset
+  replicas: 1  # ignored for DaemonSet mode
+
+alloy:
+  configMap:
+    create: true
+    content: |
+      // ═══════════════════════════════════════════════════════════════
+      // OTLP receiver — accepts metrics / logs / traces from apps
+      // ═══════════════════════════════════════════════════════════════
+      otelcol.receiver.otlp "default" {
+        grpc { endpoint = "0.0.0.0:4317" }
+        http { endpoint = "0.0.0.0:4318" }
+        output {
+          metrics = [otelcol.processor.batch.default.input]
+          logs    = [otelcol.processor.batch.default.input]
+          traces  = [otelcol.processor.batch.default.input]
+        }
+      }
+
+      otelcol.processor.batch "default" {
+        send_batch_size = 8192
+        timeout         = "2s"
+        output {
+          metrics = [otelcol.exporter.prometheusremotewrite.mimir.input]
+          logs    = [otelcol.exporter.loki.default.input]
+          traces  = [otelcol.exporter.otlp.tempo.input]
+        }
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // Exporters — pass X-Scope-OrgID from incoming context to backend.
+      // Clients set the header on their OTLP request; Alloy forwards it.
+      // ═══════════════════════════════════════════════════════════════
+      otelcol.exporter.prometheusremotewrite "mimir" {
+        endpoint {
+          url = "http://mimir-nginx.observability.svc/api/v1/push"
+        }
+      }
+
+      otelcol.exporter.loki "default" {
+        forward_to = [loki.write.default.receiver]
+      }
+      loki.write "default" {
+        endpoint {
+          url = "http://loki-gateway.observability.svc/loki/api/v1/push"
+        }
+      }
+
+      otelcol.exporter.otlp "tempo" {
+        client {
+          endpoint = "tempo.observability.svc:4317"
+          tls { insecure = true }
+        }
+      }
+
+  resources:
+    requests: { cpu: 100m, memory: 128Mi }
+    limits:   { cpu: 500m, memory: 512Mi }
+
+  extraPorts:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+      protocol: TCP
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
+      protocol: TCP
+
+service:
+  enabled: true
+  type: ClusterIP
+
+serviceMonitor:
+  enabled: false

@@ -1,0 +1,20 @@
+# Copy to terraform.tfvars and fill in with real values.
+# terraform.tfvars is gitignored.
+
+# --- Required --------------------------------------------------------------
+# Hetzner Cloud API token — create at https://console.hetzner.cloud/
+hcloud_token = "REPLACE_ME"
+
+# Name(s) of hcloud_ssh_key resources you've pre-created in the Hetzner console
+ssh_key_names = ["your-laptop-key"]
+
+# --- Recommended -----------------------------------------------------------
+# Restrict SSH to your own IPs — never leave 0.0.0.0/0 in production
+ssh_allow_cidrs = ["203.0.113.10/32"]
+
+# --- Optional --------------------------------------------------------------
+cluster_name = "observability"
+location     = "fsn1"        # fsn1 (Falkenstein), nbg1 (Nürnberg), hel1 (Helsinki), ash (Ashburn), hil (Hillsboro), sin (Singapore)
+server_type  = "cx22"        # cx22 (2/4/40), cx32 (4/8/80), cx42 (4/16/160), cx52 (8/32/320)
+node_count   = 3
+k3s_version  = "v1.31.4+k3s1"

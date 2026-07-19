@@ -1,0 +1,50 @@
+# Baseline alerts every tenant should have.
+# Loaded into Mimir's ruler via a ConfigMap.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alerts-__TENANT__
+  namespace: observability
+  labels:
+    tenant: __TENANT__
+data:
+  basic.yaml: |
+    groups:
+      - name: __TENANT__.baseline
+        interval: 30s
+        rules:
+          - alert: HighErrorRate
+            expr: |
+              sum(rate(http_requests_total{status=~"5.."}[5m])) by (service)
+                /
+              sum(rate(http_requests_total[5m])) by (service)
+                > 0.05
+            for: 5m
+            labels:
+              severity: warning
+              tenant: __TENANT__
+            annotations:
+              summary: "High 5xx error rate on {{ $labels.service }}"
+              description: "5xx rate above 5% for 5 minutes on service {{ $labels.service }} in tenant __TENANT__."
+
+          - alert: HighLatencyP99
+            expr: |
+              histogram_quantile(0.99,
+                sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service)
+              ) > 1
+            for: 10m
+            labels:
+              severity: warning
+              tenant: __TENANT__
+            annotations:
+              summary: "P99 latency > 1s on {{ $labels.service }}"
+
+          - alert: PodCrashLooping
+            expr: |
+              rate(kube_pod_container_status_restarts_total{namespace="__TENANT__"}[10m]) > 0.1
+            for: 5m
+            labels:
+              severity: critical
+              tenant: __TENANT__
+            annotations:
+              summary: "Pod {{ $labels.pod }} is crash-looping"

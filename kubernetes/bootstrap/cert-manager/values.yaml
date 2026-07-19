@@ -1,0 +1,24 @@
+# cert-manager base values
+installCRDs: true
+
+replicaCount: 1
+resources:
+  requests: { cpu: 10m, memory: 32Mi }
+  limits:   { cpu: 200m, memory: 256Mi }
+
+webhook:
+  replicaCount: 1
+  resources:
+    requests: { cpu: 10m, memory: 32Mi }
+    limits:   { cpu: 200m, memory: 128Mi }
+
+cainjector:
+  replicaCount: 1
+  resources:
+    requests: { cpu: 10m, memory: 64Mi }
+    limits:   { cpu: 200m, memory: 256Mi }
+
+prometheus:
+  enabled: true
+  servicemonitor:
+    enabled: false  # Enabled by platform meta-obs once Mimir is up

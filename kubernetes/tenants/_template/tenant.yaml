@@ -1,0 +1,40 @@
+# Tenant declaration — the single source of truth for a project on the platform.
+# Populated by onboard-tenant.sh; edit before committing.
+apiVersion: platform.observability/v1
+kind: Tenant
+metadata:
+  name: __TENANT__
+spec:
+  # Human-readable metadata
+  displayName: "__TENANT__"
+  owner: ""                    # e.g. "team-payments" or an email
+  purpose: ""                  # one-line reason this tenant exists
+  environment: production      # production | staging | dev | ephemeral
+
+  # Retention (in hours) — enforced by per-component limits
+  retention:
+    metrics: 2160   # 90 days
+    logs: 720       # 30 days
+    traces: 168     # 7 days
+    profiles: 336   # 14 days
+
+  # Ingest quotas — hard caps to prevent runaway costs
+  quotas:
+    metrics:
+      ingestion_rate: 50000       # samples/sec
+      max_active_series: 500000
+    logs:
+      ingestion_rate_mb: 5
+    traces:
+      ingestion_rate_bytes: 5000000
+    profiles:
+      ingestion_rate_mb: 2
+
+  # Grafana folder scope (dashboards + alerts land here)
+  grafana:
+    folder: "__TENANT__"
+
+  # Namespaces on the platform cluster that belong to this tenant
+  # (used by RBAC and the Alloy sidecar deployment)
+  namespaces:
+    - __TENANT__

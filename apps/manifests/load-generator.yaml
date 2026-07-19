@@ -1,0 +1,58 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: k6-script
+  namespace: demo
+data:
+  script.js: |
+    import http from 'k6/http';
+    import { check, sleep } from 'k6';
+    const BASE = __ENV.SHOP_URL || 'http://demo-shop-api.demo.svc:8080';
+    const PIDS = ['p-1','p-2','p-3','p-4','p-5','p-missing'];
+    export const options = {
+      scenarios: {
+        steady: {
+          executor: 'constant-arrival-rate',
+          rate: 20, timeUnit: '1s', duration: '365d',
+          preAllocatedVUs: 5, maxVUs: 20,
+        },
+      },
+    };
+    export default function () {
+      const r = Math.random();
+      const pid = PIDS[Math.floor(Math.random()*PIDS.length)];
+      if (r < 0.70) http.get(`${BASE}/products`);
+      else if (r < 0.90) http.get(`${BASE}/products/${pid}`);
+      else http.post(`${BASE}/orders`, JSON.stringify({product_id:pid,quantity:1}), {headers:{'Content-Type':'application/json'}});
+      sleep(0.05);
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: load-generator
+  namespace: demo
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: load-generator } }
+  template:
+    metadata:
+      labels: { app: load-generator }
+    spec:
+      containers:
+        - name: k6
+          image: grafana/k6:0.51.0
+          args: ["run", "/scripts/script.js"]
+          env:
+            - { name: SHOP_URL, value: http://demo-shop-api.demo.svc:8080 }
+            - { name: K6_PROMETHEUS_RW_SERVER_URL, value: http://mimir-nginx.observability.svc/api/v1/push }
+            - { name: K6_PROMETHEUS_RW_TREND_STATS, value: "p(95),p(99),max" }
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits:   { cpu: 200m, memory: 256Mi }
+          volumeMounts:
+            - { name: script, mountPath: /scripts }
+      volumes:
+        - name: script
+          configMap: { name: k6-script }

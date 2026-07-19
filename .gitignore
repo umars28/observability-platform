@@ -1,0 +1,56 @@
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+.terraform.lock.hcl.bak
+crash.log
+crash.*.log
+
+# Kubernetes
+kubeconfig
+*.kubeconfig
+secrets.yaml
+!secrets.example.yaml
+*.dec.yaml
+
+# SOPS
+.sops.keys
+age.key
+age.txt
+
+# Helm
+charts/
+*.tgz
+
+# Local dev
+.env
+.env.local
+.envrc
+.direnv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Build artifacts
+dist/
+build/
+bin/
+*.log
+node_modules/
+vendor/
+__pycache__/
+*.pyc
+
+# Local kind state
+kind-config-local.yaml.bak

@@ -1,0 +1,40 @@
+# Tempo — base values (monolithic 'tempo' chart, not tempo-distributed)
+fullnameOverride: tempo
+
+tempo:
+  multitenancyEnabled: true
+  retention: 168h  # 7 days default; overridden per-tenant
+  metricsGenerator:
+    enabled: true
+    remoteWriteUrl: http://mimir-nginx.observability.svc/api/v1/push
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+    jaeger:
+      protocols:
+        thrift_http:
+          endpoint: 0.0.0.0:14268
+    zipkin:
+      endpoint: 0.0.0.0:9411
+  storage:
+    trace:
+      backend: s3  # populated by overlay
+      wal:
+        path: /var/tempo/wal
+      s3: {}       # populated by overlay
+
+replicas: 1
+
+persistence:
+  enabled: true
+  size: 10Gi
+
+resources:
+  requests: { cpu: 200m, memory: 512Mi }
+
+serviceMonitor:
+  enabled: false

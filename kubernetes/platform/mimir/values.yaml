@@ -1,0 +1,95 @@
+# Mimir — base values (monolithic mode)
+# Runs the mimir-distributed chart in single-binary/monolithic layout.
+# See ADR-0003 for rationale.
+
+fullnameOverride: mimir
+
+# Enable multi-tenancy so X-Scope-OrgID is honored.
+multitenancy_enabled: true
+
+# ─── Deployment mode ────────────────────────────────────────────────────
+# Collapse all roles to a single StatefulSet (monolithic).
+mimir:
+  structuredConfig:
+    multitenancy_enabled: true
+    limits:
+      # Sane defaults; per-tenant overrides live in ../../tenants/<name>/limits.yaml
+      ingestion_rate: 100000
+      ingestion_burst_size: 200000
+      max_global_series_per_user: 1000000
+      max_query_length: 720h  # 30 days
+      compactor_blocks_retention_period: 90d
+
+# Object storage — filled in per-environment overlay.
+# See values-local.yaml (MinIO) and values-live.yaml (R2/S3).
+
+# ─── Component sizing (monolithic defaults) ─────────────────────────────
+# Collapse distributor + ingester + querier + query-frontend + store-gateway + compactor
+# into minimal replicas. Individual sections below override the chart's HA defaults.
+
+alertmanager:
+  enabled: true
+  replicas: 1
+  persistentVolume:
+    size: 1Gi
+
+compactor:
+  replicas: 1
+  persistentVolume:
+    size: 10Gi
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+
+distributor:
+  replicas: 1
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+
+ingester:
+  replicas: 1  # RF=3 requires 3 in production; overridden in values-live.yaml
+  persistentVolume:
+    size: 10Gi
+  zoneAwareReplication:
+    enabled: false
+  resources:
+    requests: { cpu: 200m, memory: 512Mi }
+
+overrides_exporter:
+  replicas: 1
+
+querier:
+  replicas: 1
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+
+query_frontend:
+  replicas: 1
+
+query_scheduler:
+  replicas: 1
+
+ruler:
+  enabled: true
+  replicas: 1
+
+store_gateway:
+  replicas: 1
+  persistentVolume:
+    size: 10Gi
+  zoneAwareReplication:
+    enabled: false
+
+# Disable bundled minio (we bring our own MinIO in bootstrap layer, or use R2/S3 in prod).
+minio:
+  enabled: false
+
+# Turn off nginx gateway; Grafana talks to Mimir services directly inside the namespace.
+nginx:
+  enabled: false
+gateway:
+  enabled: false
+
+# ServiceMonitors emitted for the platform meta-observability tenant.
+metaMonitoring:
+  serviceMonitor:
+    enabled: false  # enabled after meta-obs stack lands

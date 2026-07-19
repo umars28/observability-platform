@@ -1,0 +1,27 @@
+# Grafana — production overrides
+replicas: 2
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  hosts:
+    - grafana.__PLATFORM_DOMAIN__
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  tls:
+    - hosts: [grafana.__PLATFORM_DOMAIN__]
+      secretName: grafana-tls
+
+grafana.ini:
+  server:
+    root_url: "https://grafana.__PLATFORM_DOMAIN__/"
+  auth.anonymous:
+    enabled: false
+
+resources:
+  requests: { cpu: 250m, memory: 512Mi }
+  limits:   { cpu: 1000m, memory: 2Gi }
