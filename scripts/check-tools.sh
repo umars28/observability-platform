@@ -3,6 +3,7 @@
 set -euo pipefail
 
 REQUIRED=(
+  "docker:docs.docker.com/get-docker"
   "kubectl:kubernetes/kubectl"
   "helm:helm.sh/docs/intro/install"
   "kind:kind.sigs.k8s.io/docs/user/quick-start"
@@ -22,20 +23,23 @@ MISSING=0
 check() {
   local tool="${1%%:*}"
   local hint="${1#*:}"
+  local severity="${2:-required}"
   if command -v "$tool" >/dev/null 2>&1; then
     printf "  \033[0;32m✓\033[0m %s\n" "$tool"
   else
     printf "  \033[0;31m✗\033[0m %s — install: %s\n" "$tool" "$hint"
-    MISSING=$((MISSING + 1))
+    if [ "$severity" = "required" ]; then
+      MISSING=$((MISSING + 1))
+    fi
   fi
 }
 
 echo "Required tools:"
-for t in "${REQUIRED[@]}"; do check "$t"; done
+for t in "${REQUIRED[@]}"; do check "$t" required; done
 
 echo ""
 echo "Optional tools:"
-for t in "${OPTIONAL[@]}"; do check "$t" || true; done
+for t in "${OPTIONAL[@]}"; do check "$t" optional; done
 
 if [ "$MISSING" -gt 0 ]; then
   echo ""

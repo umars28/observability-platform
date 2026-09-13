@@ -44,6 +44,28 @@ A production-grade, multi-tenant observability platform built on the LGTMP stack
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full design.
 
+## Prerequisites
+
+Install these before running any `make` target:
+
+| Tool | Why it is needed |
+|------|------------------|
+| `docker` | Container runtime backing the local kind cluster |
+| `kubectl` | Talks to the cluster |
+| `helm` | Installs the LGTMP components |
+| `kind` | Creates the local cluster |
+| `terraform` | Provisions the reference infra (production path only) |
+| `yq` | Reads and patches the YAML values files |
+| `jq` | Parses JSON in the bootstrap and onboarding scripts |
+
+Optional, used by specific targets: `trivy` (`make security-scan`), `sops` (encrypted secrets), `argocd` (manual sync).
+
+Verify everything is present:
+
+```bash
+make check-tools
+```
+
 ## Quickstart
 
 ### Try it locally (kind cluster, no cloud cost)
