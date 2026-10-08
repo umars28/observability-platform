@@ -54,3 +54,6 @@ __pycache__/
 
 # Local kind state
 kind-config-local.yaml.bak
+
+# aiflow
+.aiflow/logs/

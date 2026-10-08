@@ -1,0 +1,7 @@
+stack: infra
+test: 
+lint: terraform fmt -recursive -check
+build: 
+migrations: ""
+chain: review
+terraform_dir: terraform
